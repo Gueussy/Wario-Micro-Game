@@ -1,35 +1,32 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.Serialization;
 using UnityEngine;
 using UnityEditor;
-using UnityEditor.SearchService;
-using UnityEngine.WSA;
-using Object = UnityEngine.Object;
-using Scene = UnityEngine.SceneManagement.Scene;
 
 public class ExportManager : EditorWindow
 {
     private string trigramme = "AAA";
     private string path = "Select folder";
-    private string MiniGameName = "MiniGame name";
-    private string[] ignoreNames = new string[] {"Resources", "Scripts"};
-    private List<String> wrongNamesPaths = new List<string>();
+    private string miniGameName = "MiniGame name";
+    private int miniGameIndex = 1;
+    private MiniGameScriptableObject miniGameSO;
+    private readonly string[] ignoreNames = {"Resources", "Scripts"};
     
+    private bool canExport;
+
     //List<String> foldersPath = new List<string>();
 
     enum NameType
     {
         SCENE,
         MAINFOLDER,
-        ASSETS
+        ASSETS,
+        SCRIPTABLEOBJECT
     }
 
 
-    [MenuItem("Assets/Export MiniGame")]
+    [MenuItem("Assets/Export Micro Game", false, 22)]
     private static void ExportationWindow()
     {
         EditorWindow.GetWindow(typeof(ExportManager));
@@ -48,22 +45,31 @@ public class ExportManager : EditorWindow
         switch (nt)
         {
             case NameType.ASSETS :
-                if (itemName.Substring(0, 4) == trigramme + "_") return true;
+                if (itemName.Length >= 5 &&
+                    itemName.Substring(0, 5) == trigramme + miniGameIndex + "_") return true;
                 break;
             
             case NameType.SCENE :
 
-                if (itemName.Substring(0, 3) == "MG_" &&
+                if ((itemName.Length == 13 + miniGameName.Length || itemName.Length == 7 + miniGameName.Length) &&
+                    itemName.Substring(0, 3) == "MG_" &&
                     itemName.Substring(3, 4) == trigramme + "_" &&
-                    itemName.Substring(7, 6) == "Scene_" &&
-                    itemName.Substring(13, MiniGameName.Length) == MiniGameName) return true;
+                    ((itemName.Substring(7, 6) == "Scene_" &&
+                      itemName.Substring(13, miniGameName.Length) == miniGameName) || 
+                     itemName.Substring(7, miniGameName.Length) == miniGameName)) return true;
                 break;
             
             case NameType.MAINFOLDER :
                 
-                if (itemName.Substring(0, 3) == "MG_" &&
+                if (itemName.Length == 7 + miniGameName.Length &&
+                    itemName.Substring(0, 3) == "MG_" &&
                     itemName.Substring(3, 4) == trigramme + "_" &&
-                    itemName.Substring(7, MiniGameName.Length) == MiniGameName) return true;
+                    itemName.Substring(7, miniGameName.Length) == miniGameName) return true;
+                break;
+            
+            case NameType.SCRIPTABLEOBJECT :
+                if (itemName.Length == 7 &&
+                    itemName.Substring(0, 7) == trigramme + miniGameIndex + "_SO") return true;
                 break;
         }
         return false;
@@ -77,12 +83,19 @@ public class ExportManager : EditorWindow
         
         EditorGUILayout.Space();
         //renseigner le trigramme
-        GUILayout.Label(("Trigramme"));
+        GUILayout.Label("Trigramme");
         trigramme = EditorGUILayout.TextField("", trigramme);
         
         //Renseigner le nom du Mini jeu
-        GUILayout.Label(("MiniGame name"));
-        MiniGameName = EditorGUILayout.TextField("", MiniGameName);
+        GUILayout.Label("MiniGame name");
+        miniGameName = EditorGUILayout.TextField("", miniGameName);
+        
+        //Renseigner l'index du Mini jeu
+        GUILayout.Label("MiniGame index");
+        miniGameIndex = EditorGUILayout.IntField("", miniGameIndex);
+
+        GUILayout.Label("Scriptable Object");
+        miniGameSO = EditorGUILayout.ObjectField("", miniGameSO, typeof(MiniGameScriptableObject), false, null) as MiniGameScriptableObject;
         
         //Renseigner le path
         EditorGUILayout.Space();
@@ -104,15 +117,17 @@ public class ExportManager : EditorWindow
         {
             CheckExportConditions();
         }
+        
+        EditorGUILayout.Space();
 
-        if (GUILayout.Button("Export"))
+        if (canExport && GUILayout.Button("Export"))
         {
             ExportMiniGame();
         }
         
     }
 
-    public void UpdatePathField()
+    private void UpdatePathField()
     {
         if (Selection.activeObject != null)
         {
@@ -120,99 +135,119 @@ public class ExportManager : EditorWindow
         }
     }
 
-    
 
-    public void CheckExportConditions()
+    private void CheckExportConditions()
     {
         //référencer tous les éléments des dossiers
-        string[] pathArray = new string[]{path};
-        List<String> allPathUUIDs = AssetDatabase.FindAssets("", pathArray).ToList();
-        List<String> allAssetsNames = new List<string>();
+        string[] pathArray = {path};
+        string[] scriptsPaths = {path + "/Scripts"};
+        var allPathGUIDs = AssetDatabase.FindAssets("", scriptsPaths).ToList();
+        var allAssetsNames = new List<string>();
+
+        //Détection des scenes et des scriptables objects
         
-        
-        //Détection des scenes
-        
-        String[] ScenePaths = AssetDatabase.FindAssets("t:scene", pathArray);
-        
-        if (ScenePaths.Length == 0)
+        var scenePaths = AssetDatabase.FindAssets("t:scene", pathArray).ToList();
+        var soPaths = AssetDatabase.FindAssets("t:MiniGameScriptableObject", pathArray).ToList();
+
+        if (!CheckObjectFolder(scenePaths, "scène") || !CheckObjectFolder(soPaths, "scriptable object"))
         {
-            Debug.Log("Pas de scene dans le dossier !");
+            canExport = false;
             return;
         }
-        else if (ScenePaths.Length > 1)
+
+        if (miniGameSO.MiniGameScene == null || miniGameSO.MiniGameInput == null ||
+            miniGameSO.MiniGameInput.Length == 0 || miniGameSO.MiniGameKeyword == "")
         {
-            Debug.Log("Plusieurs scenes dans le dossier !");
+            Debug.LogError("Le scriptable object n'a pas été rempli");
+            canExport = false;
             return;
         }
-        
-        
+
         //Tri des différents assets
-        for (int i = 0; i < allPathUUIDs.Count; i++)
+        for (int i = 0; i < allPathGUIDs.Count; i++)
         {
-            string currentAssetName = Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(allPathUUIDs[i]));
-            
-            //Vérifie si c'est la scene
-            if (AssetDatabase.GUIDToAssetPath(allPathUUIDs[i]) == AssetDatabase.GUIDToAssetPath(ScenePaths[0]))
+            string currentAssetName = Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(allPathGUIDs[i]));
+
+            foreach (var t in ignoreNames)
             {
-                //Debug.Log("remove scene from list");
-                allPathUUIDs.RemoveAt(i);
+                if (t != currentAssetName) continue;
+                
+                //Debug.Log("remove asset from list");
+                allPathGUIDs.RemoveAt(i);
                 i--;
             }
-            else //Verifie si l'asset est dans la liste des assets ignorés
-            {
-                for (int e = 0; e < ignoreNames.Length; e++)
-                {
-                    
-                    if (ignoreNames[e] == currentAssetName)
-                    {
-                        //Debug.Log("remove asset from list");
-                        allPathUUIDs.RemoveAt(i);
-                        i--;
-                    }
-                }
-            }
-            
         }
-        
-        
 
         //Récupération des noms
         
-        String SceneName = Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(ScenePaths[0]));
-
-        String FolderName = Path.GetFileName(path);
+        string sceneName = Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(scenePaths[0]));
+        string soName = Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(soPaths[0]));
+        string folderName = Path.GetFileName(path);
         
-        foreach (var UIDs in allPathUUIDs)
+        foreach (var UIDs in allPathGUIDs)
         {
-            allAssetsNames.Add(Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(UIDs)));
-        }
-        
-        //Vérification des noms
-        bool canExport = true;
+            string fileName = Path.GetFileName(AssetDatabase.GUIDToAssetPath(UIDs));
 
-        if (!VerifyNames(FolderName, NameType.MAINFOLDER))
-        {
-            Debug.Log(FolderName + " est mal nommé");
-            canExport = false;
-        }
-
-        if (!VerifyNames(SceneName, NameType.SCENE))
-        {
-            Debug.Log(SceneName + " est mal nommée");
-            canExport = false;
-        }
-
-        foreach (var assetName in allAssetsNames)
-        {
-            if (!VerifyNames(assetName, NameType.ASSETS))
+            if (fileName.Substring(fileName.Length - 2, 2) == "cs")
             {
-                Debug.Log(assetName + " est mal nommé");
-                canExport = false;
+                allAssetsNames.Add(Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(UIDs)));
             }
         }
         
-        if(canExport) Debug.Log("Tous les noms sont à jour, l'export est possible !");
-        else Debug.Log("Export non possible, corrigez les noms.");
+        //Vérification des noms
+        if (!VerifyNames(folderName, NameType.MAINFOLDER))
+        {
+            Debug.LogError( $"Le dossier racine {folderName} est mal nommé. \nLe nom doit être : MG_{trigramme}_{miniGameName}");
+            canExport = false;
+            return;
+        }
+
+        if (!VerifyNames(sceneName, NameType.SCENE))
+        {
+            Debug.LogError($"La scène {sceneName} est mal nommé. \nLe nom doit être : MG_{trigramme}_Scene_{miniGameName}");
+            canExport = false;
+            return;
+        }
+        
+        if (!VerifyNames(soName, NameType.SCRIPTABLEOBJECT))
+        {
+            Debug.LogError($"Le scriptable object {soName} est mal nommé. \nLe nom doit être : {trigramme}{miniGameIndex}_SO");
+            canExport = false;
+            return;
+        }
+
+        foreach (var assetName in allAssetsNames.Where(assetName => !VerifyNames(assetName, NameType.ASSETS)))
+        {
+            Debug.LogError(assetName + $" est mal nommé. \nLe nom doit commencer par : {trigramme}{miniGameIndex}_");
+            canExport = false;
+            return;
+        }
+
+        Debug.Log("Tous les noms sont à jour, l'export est possible !");
+        canExport = true;
+    }
+
+    private bool CheckObjectFolder(IList<string> objGUIDs, string objName)
+    {
+        for (var i = objGUIDs.Count - 1; i >= 0; i--)
+        {
+            if (Path.GetDirectoryName(AssetDatabase.GUIDToAssetPath(objGUIDs[i])) != path.Replace('/', Path.DirectorySeparatorChar))
+            {
+                objGUIDs.RemoveAt(i);
+            }
+        }
+
+        if (objGUIDs.Count == 0)
+        {
+            Debug.LogError($"Aucun(e) {objName} à la racine du dossier !");
+            return false;
+        }
+        if (objGUIDs.Count > 1)
+        {
+            Debug.LogError($"Plusieurs {objName}s à la racine du dossier !");
+            return false;
+        }
+        return true;
     }
 
     private void ExportMiniGame()
@@ -220,7 +255,7 @@ public class ExportManager : EditorWindow
         //if(!Directory.Exists("MG_Packages")) Directory.CreateDirectory("MG_Packages");
         string exportPath = EditorUtility.OpenFolderPanel("Select export location", "", "");
         
-        if(exportPath.Length != 0) AssetDatabase.ExportPackage(path, exportPath + "/" + trigramme + "_" +MiniGameName + "_MGpackage.unitypackage", ExportPackageOptions.Interactive | ExportPackageOptions.Recurse | ExportPackageOptions.Default);
+        if(exportPath.Length != 0) AssetDatabase.ExportPackage(path, exportPath + "/" + trigramme + "_" +miniGameName + "_MGpackage.unitypackage", ExportPackageOptions.Interactive | ExportPackageOptions.Recurse | ExportPackageOptions.Default);
     }
     
 }

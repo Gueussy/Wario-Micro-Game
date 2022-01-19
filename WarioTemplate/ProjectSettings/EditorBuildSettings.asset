@@ -6,12 +6,12 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/MicroGames/MG_NAB_Heist/GB_Scenes/MG_NAB_Scene_Heist.unity
+    path: Assets/MicroGames/MG_NAB_Heist/Resources/GB_Scenes/MG_NAB_Scene_Heist.unity
     guid: 25f86617445cf874d9572f319f770fc3
   - enabled: 1
-    path: Assets/MicroGames/MG_NAB_Heist/GB_Scenes/MG_NAB_Scene_Heist_GameOver.unity
+    path: Assets/MicroGames/MG_NAB_Heist/Resources/GB_Scenes/MG_NAB_Scene_Heist_GameOver.unity
     guid: 72661709df0e5874c8849b57ef390a97
   - enabled: 1
-    path: Assets/MicroGames/MG_NAB_Heist/GB_Scenes/MG_NAB_Scene_Heist_YouWin.unity
+    path: Assets/MicroGames/MG_NAB_Heist/Resources/GB_Scenes/MG_NAB_Scene_Heist_YouWin.unity
     guid: c35bbf500b3bb4344a7d72eee6b96844
   m_configObjects: {}

@@ -15,7 +15,7 @@ public interface ITickable
 public class GameController : MonoBehaviour, ITickable
 {
     public static int currentTick { get; private set; }
-    private static float gameSpeed { get; set; }
+    public static int gameBPM { get; private set; }
     public static int difficulty { get; private set; }
 
     [SerializeField] private GameControllerSO gameControllerSO;
@@ -27,7 +27,6 @@ public class GameController : MonoBehaviour, ITickable
     private static GameController instance;
     private GameState state = GameState.Micro;
     private bool debugMicro;
-
 
     public static void Register()
     {
@@ -52,6 +51,11 @@ public class GameController : MonoBehaviour, ITickable
         currentTick = 0;
         tickables.Clear();
         gameFinished = false;
+    }
+
+    public static void StopTimer()
+    {
+        // Nothing to do in template
     }
 
     public static void FinishGame(bool result)
@@ -135,17 +139,18 @@ public class GameController : MonoBehaviour, ITickable
     {
         instance = this;
         gameControllerSO = Resources.LoadAll<GameControllerSO>("").First();
-        gameSpeed = gameControllerSO.currentGameSpeed;
+        Instantiate(Resources.Load<GameObject>("MacroCanvas"));
+        gameBPM = gameControllerSO.currentGameSpeed;
         difficulty = gameControllerSO.currentDifficulty;
 
-        Time.timeScale = gameSpeed / 120;
+        Time.timeScale = (float) gameBPM / 60;
     }
 
     private void Update()
     {
-        gameSpeed = gameControllerSO.currentGameSpeed;
+        gameBPM = gameControllerSO.currentGameSpeed;
         difficulty = gameControllerSO.currentDifficulty;
-        Time.timeScale = gameSpeed / 120;
+        Time.timeScale = (float) gameBPM / 60;
     }
 
     private enum GameState

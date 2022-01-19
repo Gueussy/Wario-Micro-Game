@@ -14,8 +14,8 @@ Pour modifier la vitesse et la difficulté :
  - Modifier le ScriptableObject "Game Config"
 
 Pour exporter un mini jeu :
- TO BE DEFINED
+ - Click droit donc l'onglet Projet puis renseigner les informations
 
 ->Nomenclature :
-	Scripts : [TrigrammeGroupe_nomDuScript]
-	Ressources : [TrigrammeGroupe_nomDeLaRessource]
+	Scripts : [TrigrammeGroupe+IndexDuMiniJeu_nomDuScript]
+	Ressources : [TrigrammeGroupe+IndexDuMiniJeu_nomDeLaRessource]

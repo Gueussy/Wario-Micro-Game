@@ -18,14 +18,15 @@ public class TemplateMicroGame : MonoBehaviour, ITickable
 
     public void OnTick()
     {
-        if (GameController.currentTick == 5)
+        if (GameController.currentTick == 5) // Doit aussi être appelé si le micro jeu se finit plus tôt, 5 est le maximum
         {
-            //Le jeu se finit, il nous reste 3 ticks pour afficher le résultat
+            //Le jeu se finit, il vous reste 3 ticks pour afficher le résultat
+            GameController.StopTimer();
         }
 
         if (GameController.currentTick == 8)
         {
-            //Le jeu se décharge
+            //Le jeu se décharge 
             GameController.FinishGame(true);
         }
     }
