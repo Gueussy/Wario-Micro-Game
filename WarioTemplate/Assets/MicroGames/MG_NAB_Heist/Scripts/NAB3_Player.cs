@@ -6,10 +6,14 @@ public class NAB3_Player : MonoBehaviour, ITickable
     public Animator anim;
     public AudioClip audioClip;
 
+    public NAB3_NMIGenerator enemyGen;
+
     GameObject gameOver;
     GameObject game;
     GameObject destroyZone;
     GameObject win;
+
+    public bool endGame;
 
     int tickHolder;
 
@@ -39,7 +43,9 @@ public class NAB3_Player : MonoBehaviour, ITickable
     {
         GameManager.Register();
         GameController.Init(this);
-        tickHolder = 8;
+        endGame = false;
+        enemyGen.difficulty = GameController.difficulty;
+        Debug.Log(GameController.difficulty);
     }
     
     void Update()
@@ -57,11 +63,31 @@ public class NAB3_Player : MonoBehaviour, ITickable
     }
     public void OnTick()
     {
+        if (!endGame)
+        {
+            tickHolder = GameController.currentTick + 3;
+        }
+
         if (GameController.currentTick == 5)
         {
             GameController.StopTimer();
             game.SetActive(false);
+            endGame = true;
+
+
             //result = true; --> inutile
+            if (!gameOver.activeSelf)
+            {
+                destroyZone.SetActive(true);
+                win.SetActive(true);
+            }
+        }
+
+        if (endGame)
+        {
+            GameController.StopTimer();
+            game.SetActive(false);
+
             if (!gameOver.activeSelf)
             {
                 destroyZone.SetActive(true);
@@ -72,10 +98,9 @@ public class NAB3_Player : MonoBehaviour, ITickable
         if (GameController.currentTick == tickHolder)
         {
             GameController.FinishGame(result);
-            //Debug.Log("EndofGame");
         }
 
-        Debug.Log(GameController.currentTick);
+        //Debug.Log(GameController.currentTick);
     }
 
 
@@ -98,8 +123,9 @@ public class NAB3_Player : MonoBehaviour, ITickable
             destroyZone.SetActive(true);
 
             result = false;
-            tickHolder = GameController.currentTick + 3;
-            GameController.StopTimer();
+
+            endGame = true;
+            
         }
 
         /////////////////////////////////////////////////

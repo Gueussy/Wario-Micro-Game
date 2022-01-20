@@ -19,7 +19,7 @@ public class NAB3_NMI : MonoBehaviour
     {
         if(collision.gameObject.CompareTag("nextLine"))
         {
-            enemyGenerator.GenerateNextGuardWithGap();
+            enemyGenerator.GenerateNextDogWithGap();
             PlaySound();
         }
 
