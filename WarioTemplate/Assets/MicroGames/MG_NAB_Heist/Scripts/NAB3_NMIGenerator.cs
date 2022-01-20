@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class NAB3_NMIGenerator : MonoBehaviour
@@ -15,7 +13,13 @@ public class NAB3_NMIGenerator : MonoBehaviour
     void Awake()
     {
         currentSpeed = MinSpeed;
-        generateGuard();
+        //generateGuard();
+    }
+
+    private void Start()
+    {
+        float randomWait = Random.Range(1.1f, 2.1f);
+        Invoke("generateGuard", randomWait);
     }
 
     public void GenerateNextGuardWithGap()

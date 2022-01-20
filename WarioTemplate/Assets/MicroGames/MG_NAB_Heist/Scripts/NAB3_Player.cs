@@ -76,24 +76,6 @@ public class NAB3_Player : MonoBehaviour, ITickable
         }
 
         Debug.Log(GameController.currentTick);
-
-        /*if (GameController.currentTick == 1)
-            Debug.Log("1");
-        if (GameController.currentTick == 2)
-            Debug.Log("2");
-        if (GameController.currentTick == 3)
-            Debug.Log("3");
-        if (GameController.currentTick == 4)
-            Debug.Log("4");
-        if (GameController.currentTick == 5)
-            Debug.Log("5");
-        if (GameController.currentTick == 6)
-            Debug.Log("6");
-        if (GameController.currentTick == 7)
-            Debug.Log("7");
-        if (GameController.currentTick == 8)
-            Debug.Log("8");*/
-
     }
 
 
@@ -108,17 +90,20 @@ public class NAB3_Player : MonoBehaviour, ITickable
             }
         }
 
+        /////////////////////Game Over//////////////////
         if (collision.gameObject.CompareTag("guard"))
         {
             gameOver.SetActive(true);
             game.SetActive(false);
             destroyZone.SetActive(true);
 
-
             result = false;
             tickHolder = GameController.currentTick + 3;
             GameController.StopTimer();
         }
+
+        /////////////////////////////////////////////////
+
             /*if (destroyZone == null)
                 destroyZone.SetActive(true);
             if (!destroyZone.activeSelf)
